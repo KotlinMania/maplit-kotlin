@@ -27,44 +27,41 @@ class LibTest {
         )
         assertEquals(2, nestedCompiles.size)
 
-        val converted: HashMap<String, Int> = hashmap(
-            *convertArgs(keys = { s: String -> s }, values = ::identity,
-                "one" to 1,
-                "two" to 2,
-            ),
+        val converted: HashMap<String, Int> = convertArgsHashmap(
+            keys = { s: String -> s },
+            values = ::id,
+            "one" to 1,
+            "two" to 2,
         )
         assertEquals(2, converted.size)
 
-        val convertedExplicitId: HashMap<String, Int> = hashmap(
-            *convertArgs(keys = { s: String -> s }, values = ::identity,
-                "one" to 1,
-                "two" to 2,
-            ),
+        val convertedExplicitId: HashMap<String, Int> = convertArgsHashmap(
+            keys = { s: String -> s },
+            values = ::id,
+            "one" to 1,
+            "two" to 2,
         )
         assertEquals(2, convertedExplicitId.size)
 
-        val names2: HashSet<String> = hashset(
-            *convertArgsElements(::identity,
-                "one",
-                "two",
-            ),
+        val names2: HashSet<String> = convertArgsHashset(
+            keys = ::id,
+            "one",
+            "two",
         )
         assertTrue(names2.contains("one"))
         assertTrue(names2.contains("two"))
 
-        val lengths: HashSet<Int> = hashset(
-            *convertArgsElements({ s: String -> s.length },
-                "one",
-                "two",
-            ),
+        val lengths: HashSet<Int> = convertArgsHashset(
+            keys = { s: String -> s.length },
+            "one",
+            "two",
         )
         assertEquals(1, lengths.size)
 
-        val noTrailing: HashSet<Int> = hashset(
-            *convertArgsElements({ s: String -> s.length },
-                "one",
-                "two",
-            ),
+        val noTrailing: HashSet<Int> = convertArgsHashset(
+            keys = { s: String -> s.length },
+            "one",
+            "two",
         )
         assertEquals(1, noTrailing.size)
     }
