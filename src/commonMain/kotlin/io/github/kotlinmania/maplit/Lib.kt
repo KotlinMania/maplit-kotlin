@@ -118,33 +118,77 @@ fun <T> btreeset(vararg elements: T): BTreeSet<T> {
     return set
 }
 
-/** Identity function. Used as the fallback for conversion. */
+/**
+ * Identity function. Used as the fallback for conversion.
+ *
+ * This is the Kotlin counterpart of the upstream `__id` function, which serves as a
+ * fallback when no custom conversion is needed. In the upstream Rust `convert_args!`
+ * macro, conversions default to `Into::into`; in the Kotlin port, conversions are
+ * always explicit, and this function provides a no-op conversion.
+ */
 fun <T> id(t: T): T = t
 
 /**
- * Helpers that convert the keys or key-value pairs passed to another maplit
- * helper. These are the runtime-API counterpart of the upstream
- * `convert_args!` macro: each container helper has a sibling that takes a
- * `keys` and `values` lambda and applies them to every entry before
- * inserting.
+ * Helper that converts the keys or key-value pairs passed to another maplit
+ * helper. This is the runtime-API counterpart of the upstream `convert_args!` macro.
  *
- * The Kotlin port pulls the conversion functions to the front of each
- * helper's parameter list and leaves the entries as a trailing vararg, so a
- * call site reads:
+ * The upstream `convert_args!` macro has the following syntax:
  *
  * ```
- * val map: HashMap<String, Int> = convertArgsHashmap(
- *     keys = { it: String -> it },
- *     values = ::id,
- *     "one" to 1,
- *     "two" to 2,
+ * convert_args!(keys=function, values=function, macro_name!(key => value, ...))
+ * ```
+ *
+ * where either or both of the explicit `keys=` and `values=` parameters can be omitted,
+ * defaulting to `Into::into`.
+ *
+ * The Kotlin port provides separate conversion-aware functions for each container type:
+ * [convertArgsHashmap], [convertArgsHashset], [convertArgsBtreemap], [convertArgsBtreeset].
+ * Each pulls the conversion functions to the front of the parameter list and leaves the
+ * entries as a trailing vararg.
+ *
+ * ## Examples
+ *
+ * ```
+ * // a. Explicit conversion for both keys and values.
+ * // The upstream would write this as:
+ * //   let map1: HashMap<String, String> = convert_args!(hashmap!("a" => "b", "c" => "d"));
+ * // with default Into::into conversions. In Kotlin we write:
+ * val map1: HashMap<String, String> = convertArgsHashmap(
+ *     keys = String::toString,
+ *     values = String::toString,
+ *     "a" to "b",
+ *     "c" to "d",
  * )
+ *
+ * // b. Specify an explicit custom conversion for the keys. If we don't specify
+ * // a conversion for the values, pass id to leave them unchanged.
+ * // The upstream Rust would write:
+ * //   let map2 = convert_args!(keys=String::from, hashmap!("a" => 1, "c" => 2));
+ * // In Kotlin:
+ * val map2 = convertArgsHashmap(
+ *     keys = { s: String -> s },
+ *     values = ::id,
+ *     "a" to 1,
+ *     "c" to 2,
+ * )
+ * // Note: map2 is a HashMap<String, Int>, but we didn't need to specify the type
+ * val _: HashMap<String, Int> = map2
+ *
+ * // c. Conversion-aware helpers work with all the maplit container types.
+ * // For example, converting strings to byte arrays in a BTreeSet.
+ * // The upstream Rust would write:
+ * //   let set: BTreeSet<Vec<u8>> = convert_args!(btreeset!("a", "b", "c", "d", "a", "e", "f"));
+ * // In Kotlin:
+ * val set: io.github.kotlinmania.btree.BTreeSet<ByteArray> = convertArgsBtreeset(
+ *     keys = { s: String -> s.encodeToByteArray() },
+ *     "a", "b", "c", "d", "a", "e", "f",
+ * )
+ * check(set.size == 6)
  * ```
  *
- * Pass [id] for either lambda to leave the corresponding side untouched. The
- * upstream macro defaults to `Into::into` for both lambdas; Kotlin has no
- * matching auto-conversion trait, so the conversion functions are always
- * explicit at the call site.
+ * Pass [id] for either lambda to leave the corresponding side untouched. Kotlin has no
+ * matching auto-conversion trait equivalent to Rust's `Into`, so the conversion functions
+ * are always explicit at the call site.
  */
 fun <K, V, NK, NV> convertArgsHashmap(
     keys: (K) -> NK,
