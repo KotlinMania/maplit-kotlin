@@ -215,6 +215,7 @@ kotlin {
     iosSimulatorArm64 {
         binaries.framework {
             baseName = "Maplit"
+            isStatic = true
             xcf.add(this)
         }
     }
