@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "/Volumes/stuff/Projects/kotlinmania/maplit-kotlin/swift-test-harness/.build/arm64-apple-macosx/debug/Maplit.build/primary.swiftdeps"
+  },
+  "/Volumes/stuff/Projects/kotlinmania/maplit-kotlin/build/SPMPackage/macosArm64/Debug/Sources/Maplit/Maplit.swift": {
+    "dependencies": "/Volumes/stuff/Projects/kotlinmania/maplit-kotlin/swift-test-harness/.build/arm64-apple-macosx/debug/Maplit.build/Maplit.d",
+    "object": "/Volumes/stuff/Projects/kotlinmania/maplit-kotlin/swift-test-harness/.build/arm64-apple-macosx/debug/Maplit.build/Maplit.swift.o",
+    "swiftmodule": "/Volumes/stuff/Projects/kotlinmania/maplit-kotlin/swift-test-harness/.build/arm64-apple-macosx/debug/Maplit.build/Maplit~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/stuff/Projects/kotlinmania/maplit-kotlin/swift-test-harness/.build/arm64-apple-macosx/debug/Maplit.build/Maplit.swiftdeps",
+    "diagnostics": "/Volumes/stuff/Projects/kotlinmania/maplit-kotlin/swift-test-harness/.build/arm64-apple-macosx/debug/Maplit.build/Maplit.dia"
+  }
+}
