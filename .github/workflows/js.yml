@@ -1,5 +1,4 @@
 name: Build (JS)
-# 
 
 on:
   workflow_call:

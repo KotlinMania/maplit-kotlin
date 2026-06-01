@@ -1,5 +1,4 @@
 name: Build (Linux)
-# 
 
 on:
   workflow_call:

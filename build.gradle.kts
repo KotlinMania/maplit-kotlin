@@ -256,8 +256,6 @@ kotlin {
 
     // Apple — Tier 1/2 targets
     macosArm64 { addToXcf(deploymentTarget = "11.0") }
-    iosArm64 { addToXcf(static = true, deploymentTarget = "14.0") }
-    iosSimulatorArm64 { addToXcf(static = true, deploymentTarget = "14.0") }
     tvosArm64 { addToXcf(deploymentTarget = "14.0") }
     tvosSimulatorArm64 { addToXcf(deploymentTarget = "14.0") }
     watchosArm64 { addToXcf(deploymentTarget = "7.0") }
@@ -646,166 +644,6 @@ tasks.register("hostTests") {
     )
 }
 
-// Skip embedSwiftExportForXcode unless Xcode env is present or task is explicitly requested.
-val xcodeSwiftExportEnvironmentNames =
-    listOf(
-        "SDK_NAME",
-        "CONFIGURATION",
-        "TARGET_BUILD_DIR",
-        "BUILT_PRODUCTS_DIR",
-        "ARCHS",
-        "FRAMEWORKS_FOLDER_PATH",
-        "DEPLOYMENT_TARGET_SETTING_NAME",
-    )
-
-fun hasXcodeSwiftExportEnvironment(): Boolean {
-    val allPresent =
-        xcodeSwiftExportEnvironmentNames.all {
-            !providers.environmentVariable(it).orNull.isNullOrBlank()
-        }
-    if (!allPresent) return false
-    val deploymentTarget = providers.environmentVariable("DEPLOYMENT_TARGET_SETTING_NAME").orNull ?: return false
-    return !providers.environmentVariable(deploymentTarget).orNull.isNullOrBlank()
-}
-
-val swiftExportTaskDirectlyRequested =
-    gradle.startParameter.taskNames.any {
-        it == "embedSwiftExportForXcode" || it.endsWith(":embedSwiftExportForXcode")
-    }
-
-tasks.matching { it.name == "embedSwiftExportForXcode" }.configureEach {
-    onlyIf("Xcode environment variables not present") {
-        val hasXcodeEnvironment = hasXcodeSwiftExportEnvironment()
-        if (!hasXcodeEnvironment && !swiftExportTaskDirectlyRequested) {
-            logger.lifecycle("embedSwiftExportForXcode: skipped because Xcode environment variables are not present")
-        }
-        hasXcodeEnvironment || swiftExportTaskDirectlyRequested
-    }
-}
-
-// Swift Export smoke test — produces the SPM package via embedSwiftExportForXcode
-// (spawned with the Xcode-style env it requires) and runs `swift test` against it,
-// so Swift Export breakage surfaces locally, not only in the swift.yml CI job.
-// Pattern mirrors kasuari-kotlin. macOS-only; skipped elsewhere.
-tasks.register("swiftExportSmokeTest") {
-    group = "verification"
-    description = "Builds the Swift Export SPM package and runs swift test against it."
-    onlyIf {
-        if (!isMacHost) {
-            logger.lifecycle("swiftExportSmokeTest: skipped because Swift Export smoke tests require macOS")
-        }
-        isMacHost
-    }
-    outputs.upToDateWhen { false }
-
-    doLast {
-        val execOperations = serviceOf<ExecOperations>()
-        val swiftBuildDir = layout.buildDirectory.dir("swift-test").get().asFile.absolutePath
-        execOperations.exec {
-            workingDir = projectDir
-            commandLine(
-                "./gradlew",
-                "embedSwiftExportForXcode",
-                "--no-configuration-cache",
-                "--no-daemon",
-                "--console=plain",
-            )
-            environment(
-                mapOf(
-                    "BUILT_PRODUCTS_DIR" to swiftBuildDir,
-                    "TARGET_BUILD_DIR" to swiftBuildDir,
-                    "SDK_NAME" to "macosx",
-                    "CONFIGURATION" to "Debug",
-                    "ARCHS" to "arm64",
-                    "FRAMEWORKS_FOLDER_PATH" to "Frameworks",
-                    "MACOSX_DEPLOYMENT_TARGET" to "14.0",
-                    "DEPLOYMENT_TARGET_SETTING_NAME" to "MACOSX_DEPLOYMENT_TARGET",
-                ),
-            )
-        }.assertNormalExitValue()
-
-        execOperations.exec {
-            workingDir = layout.projectDirectory.dir("swift-test-harness").asFile
-            commandLine("swift", "test")
-        }.assertNormalExitValue()
-    }
-}
-
-// ============================================================================
-// `build` aggregate
-// ----------------------------------------------------------------------------
-// tasks.matching returns a live TaskCollection — no afterEvaluate needed.
-// KMP tasks registered after kotlin { } are captured automatically.
-// ============================================================================
-// Every configured native target, unconditionally. This is the audit contract —
-// it must mirror the kotlin { } target block exactly. watchosArm32 is the only
-// retired native target (see §5.5.1); everything else MUST build.
-val nativeTargetNames =
-    listOf(
-        "androidNativeArm32",
-        "androidNativeArm64",
-        "androidNativeX64",
-        "androidNativeX86",
-        "iosArm64",
-        "iosSimulatorArm64",
-        "iosX64",
-        "linuxArm64",
-        "linuxX64",
-        "macosArm64",
-        "mingwX64",
-        "tvosArm64",
-        "tvosSimulatorArm64",
-        "watchosArm64",
-        "watchosDeviceArm64",
-        "watchosSimulatorArm64",
-    )
-
-val fullTargetBuildTaskNames =
-    buildSet {
-        addAll(
-            listOf(
-                "compileAndroidMain",
-                "compileAndroidHostTest",
-                "compileAndroidDeviceTest",
-                "assembleAndroidMain",
-                "assembleUnitTest",
-                "assembleAndroidTest",
-                "assembleAndroidDeviceTest",
-                "jvmMainClasses",
-                "jvmTestClasses",
-                "jsMainClasses",
-                "jsTestClasses",
-                "wasmJsMainClasses",
-                "wasmJsTestClasses",
-                "wasmWasiMainClasses",
-                "wasmWasiTestClasses",
-                "embedSwiftExportForXcode",
-                "assemble${frameworkName}XCFramework",
-            ),
-        )
-        for (target in nativeTargetNames) {
-            add("${target}Binaries")
-            add("${target}TestBinaries")
-        }
-    }
-
-tasks.named("build") {
-    dependsOn(fullTargetBuildTaskNames)
-    dependsOn(
-        tasks.matching {
-            name.endsWith("MainClasses") ||
-                name.endsWith("TestClasses") ||
-                name.endsWith("Binaries") ||
-                name.endsWith("XCFramework") ||
-                name == "embedSwiftExportForXcode" ||
-                name.startsWith("exportCommonSourceSetsMetadataLocationsFor") ||
-                name.startsWith("exportRootPublicationCoordinatesFor") ||
-                name.startsWith("exportCrossCompilationMetadataFor") ||
-                name.startsWith("exportTargetPublicationCoordinatesFor")
-        },
-    )
-}
-
 val xcodeSwiftExportEnvironmentNames = listOf(
     "SDK_NAME",
     "CONFIGURATION",
@@ -894,8 +732,6 @@ val fullTargetBuildTasks = listOf(
     "tvosArm64TestBinaries",
     "tvosSimulatorArm64Binaries",
     "tvosSimulatorArm64TestBinaries",
-    "watchosArm32Binaries",
-    "watchosArm32TestBinaries",
     "watchosArm64Binaries",
     "watchosArm64TestBinaries",
     "watchosDeviceArm64Binaries",
@@ -935,7 +771,6 @@ val fullTargetBuildTasks = listOf(
     "exportCrossCompilationMetadataForMingwX64ApiElements",
     "exportCrossCompilationMetadataForTvosArm64ApiElements",
     "exportCrossCompilationMetadataForTvosSimulatorArm64ApiElements",
-    "exportCrossCompilationMetadataForWatchosArm32ApiElements",
     "exportCrossCompilationMetadataForWatchosArm64ApiElements",
     "exportCrossCompilationMetadataForWatchosDeviceArm64ApiElements",
     "exportCrossCompilationMetadataForWatchosSimulatorArm64ApiElements",
@@ -962,7 +797,6 @@ val fullTargetBuildTasks = listOf(
     "exportTargetPublicationCoordinatesForWasmJsRuntimeElements",
     "exportTargetPublicationCoordinatesForWasmWasiApiElements",
     "exportTargetPublicationCoordinatesForWasmWasiRuntimeElements",
-    "exportTargetPublicationCoordinatesForWatchosArm32ApiElements",
     "exportTargetPublicationCoordinatesForWatchosArm64ApiElements",
     "exportTargetPublicationCoordinatesForWatchosDeviceArm64ApiElements",
     "exportTargetPublicationCoordinatesForWatchosSimulatorArm64ApiElements",
