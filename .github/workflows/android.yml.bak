@@ -1,5 +1,4 @@
 name: Build (Android)
-# 
 
 on:
   workflow_call:
@@ -36,5 +35,4 @@ jobs:
           compileAndroidMain
           assembleUnitTest
           assembleAndroidTest
-          testAndroidHostTest
           --no-configuration-cache

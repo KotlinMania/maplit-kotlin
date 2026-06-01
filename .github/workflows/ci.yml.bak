@@ -1,5 +1,4 @@
 name: CI
-# 
 
 on:
   workflow_dispatch:
@@ -68,9 +67,5 @@ jobs:
       contents: read
   wasm:
     uses: ./.github/workflows/wasm.yml
-    permissions:
-      contents: read
-  swift:
-    uses: ./.github/workflows/swift.yml
     permissions:
       contents: read
