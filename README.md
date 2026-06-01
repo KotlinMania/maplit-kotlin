@@ -20,7 +20,7 @@ This is an **in-progress port**. The goal is feature parity with the upstream Ru
 
 ```kotlin
 dependencies {
-    implementation("io.github.kotlinmania:maplit-kotlin:0.1.0")
+    implementation("io.github.kotlinmania:maplit-kotlin:0.1.1")
 }
 ```
 
