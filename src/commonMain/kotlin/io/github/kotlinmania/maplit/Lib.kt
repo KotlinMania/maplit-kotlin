@@ -1,3 +1,5 @@
+@file:OptIn(kotlin.experimental.ExperimentalObjCRefinement::class)
+
 // port-lint: source src/lib.rs
 package io.github.kotlinmania.maplit
 
@@ -41,6 +43,7 @@ import io.github.kotlinmania.btree.BTreeSet
  * check(map["c"] == null)
  * ```
  */
+@kotlin.native.HiddenFromObjC
 fun <K, V> hashmap(vararg entries: Pair<K, V>): HashMap<K, V> {
     val map = HashMap<K, V>()
     for ((key, value) in entries) {
@@ -63,6 +66,7 @@ fun <K, V> hashmap(vararg entries: Pair<K, V>): HashMap<K, V> {
  * check("c" !in set)
  * ```
  */
+@kotlin.native.HiddenFromObjC
 fun <T> hashset(vararg elements: T): HashSet<T> {
     val set = HashSet<T>()
     for (element in elements) {
@@ -88,6 +92,7 @@ fun <T> hashset(vararg elements: T): HashSet<T> {
  * check(map["c"] == null)
  * ```
  */
+@kotlin.native.HiddenFromObjC
 fun <K, V> btreemap(vararg entries: Pair<K, V>): BTreeMap<K, V> {
     val map = BTreeMap<K, V>()
     for ((key, value) in entries) {
@@ -110,6 +115,7 @@ fun <K, V> btreemap(vararg entries: Pair<K, V>): BTreeMap<K, V> {
  * check("c" !in set)
  * ```
  */
+@kotlin.native.HiddenFromObjC
 fun <T> btreeset(vararg elements: T): BTreeSet<T> {
     val set = BTreeSet<T>()
     for (element in elements) {
@@ -126,6 +132,7 @@ fun <T> btreeset(vararg elements: T): BTreeSet<T> {
  * this function provides a no-op conversion to pass when the caller does not want
  * to change one of the sides.
  */
+@kotlin.native.HiddenFromObjC
 fun <T> id(t: T): T = t
 
 /**
@@ -176,6 +183,7 @@ fun <T> id(t: T): T = t
  * no auto-conversion analog of the standard-library `Into` trait, so the conversion
  * functions are always explicit at the call site.
  */
+@kotlin.native.HiddenFromObjC
 fun <K, V, NK, NV> convertArgsHashmap(
     keys: (K) -> NK,
     values: (V) -> NV,
@@ -189,6 +197,7 @@ fun <K, V, NK, NV> convertArgsHashmap(
 }
 
 /** Conversion-aware sibling of [hashset] (see [convertArgsHashmap]). */
+@kotlin.native.HiddenFromObjC
 fun <T, NT> convertArgsHashset(
     keys: (T) -> NT,
     vararg elements: T,
@@ -201,6 +210,7 @@ fun <T, NT> convertArgsHashset(
 }
 
 /** Conversion-aware sibling of [btreemap] (see [convertArgsHashmap]). */
+@kotlin.native.HiddenFromObjC
 fun <K, V, NK, NV> convertArgsBtreemap(
     keys: (K) -> NK,
     values: (V) -> NV,
@@ -214,6 +224,7 @@ fun <K, V, NK, NV> convertArgsBtreemap(
 }
 
 /** Conversion-aware sibling of [btreeset] (see [convertArgsHashmap]). */
+@kotlin.native.HiddenFromObjC
 fun <T, NT> convertArgsBtreeset(
     keys: (T) -> NT,
     vararg elements: T,

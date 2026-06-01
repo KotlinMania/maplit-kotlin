@@ -272,6 +272,19 @@ kotlin {
     linuxX64()
     linuxArm64()
     mingwX64()
+    iosArm64 {
+        binaries.framework {
+            baseName = "Maplit"
+            xcf.add(this)
+        }
+    }
+    iosSimulatorArm64 {
+        binaries.framework {
+            baseName = "Maplit"
+            isStatic = true
+            xcf.add(this)
+        }
+    }
 
     // Android NDK — always built (full target surface, no opt-in gate).
     androidNativeArm32()
