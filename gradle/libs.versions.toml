@@ -27,7 +27,7 @@ collections-immutable = { module = "org.jetbrains.kotlinx:kotlinx-collections-im
 kotlinmania-btree = { module = "io.github.kotlinmania:btree-kotlin", version.ref = "btreeKotlin" }
 
 [bundles]
-serde-commonMain = [
+proc-macro-commonMain = [
   "kotlinx-coroutines-core",
   "kotlinx-serialization-core",
   "kotlinx-serialization-json",
