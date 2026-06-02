@@ -7,7 +7,7 @@ package io.github.kotlinmania.maplit
 import io.github.kotlinmania.btree.BTreeMap
 import io.github.kotlinmania.btree.BTreeSet
 
-/*
+/**
  * Helpers for container literals with specific type.
  *
  * ```
