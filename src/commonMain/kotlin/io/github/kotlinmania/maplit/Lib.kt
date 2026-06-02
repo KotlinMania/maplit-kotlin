@@ -1,12 +1,12 @@
+// port-lint: source src/lib.rs
 @file:OptIn(kotlin.experimental.ExperimentalObjCRefinement::class)
 
-// port-lint: source src/lib.rs
 package io.github.kotlinmania.maplit
 
 import io.github.kotlinmania.btree.BTreeMap
 import io.github.kotlinmania.btree.BTreeSet
 
-/**
+/*
  * Helpers for container literals with specific type.
  *
  * ```
