@@ -5,7 +5,6 @@ import org.gradle.api.tasks.testing.AbstractTestTask
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestLogEvent
 import org.gradle.kotlin.dsl.support.serviceOf
-import org.gradle.plugins.signing.Sign
 import org.gradle.process.ExecOperations
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
@@ -21,13 +20,8 @@ import org.jetbrains.kotlin.gradle.targets.wasm.nodejs.WasmNodeJsEnvSpec
 import org.jetbrains.kotlin.gradle.targets.wasm.yarn.WasmYarnRootEnvSpec
 import java.io.ByteArrayInputStream
 import java.net.URI
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
-import java.util.Base64
-import java.util.UUID
 import java.util.zip.ZipInputStream
 
 plugins {
@@ -55,6 +49,53 @@ val commonMainDependencyBundle =
         .named("libs")
         .findBundle(commonMainBundleName)
         .orElseThrow { GradleException("Missing libs bundle '$commonMainBundleName'") }
+
+fun csvProperty(name: String): Set<String> =
+    providers
+        .gradleProperty(name)
+        .map { value ->
+            value
+                .split(",")
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+                .toSet()
+        }.getOrElse(emptySet())
+
+fun optionalTrimmedProperty(name: String): String? =
+    providers
+        .gradleProperty(name)
+        .map { it.trim() }
+        .orNull
+        ?.takeIf { it.isNotEmpty() }
+
+val enabledFeatureNames = csvProperty("project.features")
+val benchmarkEnabled = "benchmark" in enabledFeatureNames
+val benchmarkTargetNames = csvProperty("project.benchmark.targets")
+val commonBenchmarkBundleName = optionalTrimmedProperty("project.dependencies.commonBenchmarkBundle")
+val commonBenchmarkDependencyBundle =
+    commonBenchmarkBundleName?.let { bundleName ->
+        extensions
+            .getByType(VersionCatalogsExtension::class.java)
+            .named("libs")
+            .findBundle(bundleName)
+            .orElseThrow { GradleException("Missing libs bundle '$bundleName'") }
+    }
+val commonTestBundleName = optionalTrimmedProperty("project.dependencies.commonTestBundle")
+val commonTestDependencyBundle =
+    commonTestBundleName?.let { bundleName ->
+        extensions
+            .getByType(VersionCatalogsExtension::class.java)
+            .named("libs")
+            .findBundle(bundleName)
+            .orElseThrow { GradleException("Missing libs bundle '$bundleName'") }
+    }
+if (benchmarkEnabled && commonBenchmarkDependencyBundle == null) {
+    throw GradleException("Feature 'benchmark' requires project.dependencies.commonBenchmarkBundle")
+}
+val benchmarkWarmups = providers.gradleProperty("project.benchmark.warmups").map { it.toInt() }.getOrElse(3)
+val benchmarkIterations = providers.gradleProperty("project.benchmark.iterations").map { it.toInt() }.getOrElse(5)
+val benchmarkIterationTime = providers.gradleProperty("project.benchmark.iterationTime").map { it.toLong() }.getOrElse(1L)
+val benchmarkIterationTimeUnit = providers.gradleProperty("project.benchmark.iterationTimeUnit").getOrElse("s")
 
 // Opt-ins shared across Kotlin targets.
 val commonOptIns =
@@ -484,8 +525,6 @@ if (benchmarkEnabled) {
     }
 }
 
-
-
 // ============================================================================
 // Test logging
 // ============================================================================
@@ -657,6 +696,13 @@ val emptyJavadocJar by tasks.registering(Jar::class) {
 // Exact test lifecycle task. Without this, ./gradlew test is ambiguous between
 // Android test task names. This runs commonTest through the KMP allTests
 // lifecycle and adds the Android host + Swift Export parity tests.
+tasks.register("test") {
+    group = "verification"
+    description = "Runs the commonTest-backed KMP suite, Android host tests, and Swift Export smoke test."
+    dependsOn("hostTests")
+    dependsOn("swiftExportSmokeTest")
+}
+
 tasks.register("setupAndroidSdk") {
     group = "setup"
     description = "Downloads and configures the project-local Android SDK. (Alias for ensureAndroidSdk)"
@@ -682,18 +728,27 @@ tasks.register("hostTests") {
 // Patch generated SPM Package.swift to include minimum macOS platform for Swift Concurrency
 tasks.matching { it.name.contains("GenerateSPMPackage") }.configureEach {
     doLast {
-        val spmDir = layout.buildDirectory.dir("SPMPackage").orNull?.asFile
+        val spmDir =
+            layout.buildDirectory
+                .dir("SPMPackage")
+                .orNull
+                ?.asFile
         if (spmDir != null && spmDir.exists()) {
             spmDir.walkTopDown().filter { it.name == "Package.swift" }.forEach { file ->
-                val text = file.readText()
+                var text = file.readText()
+                if (text.contains("swift-tools-version: 6.0")) {
+                    text = text.replace("swift-tools-version: 6.0", "swift-tools-version: 5.9")
+                }
                 if (!text.contains("platforms:")) {
-                    file.writeText(
+                    text =
                         text.replaceFirst(
                             Regex("""(let package = Package\s*\(\s*name:\s*"[^"]*",)"""),
-                            "$1\n    platforms: [.macOS(.v14)],",
-                        ),
-                    )
+                            "$1\n    platforms: [.macOS(\"15.0\")],",
+                        )
+                } else if (text.contains(".macOS(.v15)") || text.contains(".macOS(.v14)")) {
+                    text = text.replace(".macOS(.v15)", ".macOS(\"15.0\")").replace(".macOS(.v14)", ".macOS(\"15.0\")")
                 }
+                file.writeText(text)
             }
         }
     }
@@ -740,7 +795,7 @@ tasks.register("swiftExportSmokeTest") {
                         "CONFIGURATION" to "Debug",
                         "ARCHS" to "arm64",
                         "FRAMEWORKS_FOLDER_PATH" to "Frameworks",
-                        "MACOSX_DEPLOYMENT_TARGET" to "14.0",
+                        "MACOSX_DEPLOYMENT_TARGET" to "15.0",
                         "DEPLOYMENT_TARGET_SETTING_NAME" to "MACOSX_DEPLOYMENT_TARGET",
                     ),
                 )
@@ -752,15 +807,20 @@ tasks.register("swiftExportSmokeTest") {
                 .get()
                 .asFile
         if (generatedPackageSwift.exists()) {
-            val text = generatedPackageSwift.readText()
+            var text = generatedPackageSwift.readText()
+            if (text.contains("swift-tools-version: 6.0")) {
+                text = text.replace("swift-tools-version: 6.0", "swift-tools-version: 5.9")
+            }
             if (!text.contains("platforms:")) {
-                generatedPackageSwift.writeText(
+                text =
                     text.replaceFirst(
                         Regex("(name:\\s*\"[^\"]*\",)"),
-                        "\$1\n    platforms: [.macOS(.v14)],",
-                    ),
-                )
+                        "\$1\n    platforms: [.macOS(\"15.0\")],",
+                    )
+            } else if (text.contains(".macOS(.v15)") || text.contains(".macOS(.v14)")) {
+                text = text.replace(".macOS(.v15)", ".macOS(\"15.0\")").replace(".macOS(.v14)", ".macOS(\"15.0\")")
             }
+            generatedPackageSwift.writeText(text)
         }
 
         execOperations

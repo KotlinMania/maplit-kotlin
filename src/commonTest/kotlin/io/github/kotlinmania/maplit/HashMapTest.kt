@@ -1,4 +1,3 @@
-// port-lint: source src/lib.rs
 package io.github.kotlinmania.maplit
 
 import kotlin.test.Test
@@ -6,7 +5,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class LibTest {
+class HashMapTest {
     @Test
     fun testHashmap() {
         val names =
@@ -71,28 +70,5 @@ class LibTest {
                 "two",
             )
         assertEquals(1, noTrailing.size)
-    }
-
-    @Test
-    fun testBtreemap() {
-        val names =
-            btreemap(
-                1 to "one",
-                2 to "two",
-            )
-        assertEquals(2, names.size)
-        assertEquals("one", names[1])
-        assertEquals("two", names[2])
-        assertNull(names[3])
-
-        val empty: io.github.kotlinmania.btree.BTreeMap<Int, Int> = btreemap()
-        assertEquals(0, empty.size)
-
-        val nestedCompiles =
-            btreemap(
-                1 to btreemap(0 to 1 + 2),
-                2 to btreemap(1 to 1),
-            )
-        assertEquals(2, nestedCompiles.size)
     }
 }

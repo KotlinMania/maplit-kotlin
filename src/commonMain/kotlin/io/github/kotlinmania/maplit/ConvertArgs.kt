@@ -1,129 +1,9 @@
 @file:OptIn(kotlin.experimental.ExperimentalObjCRefinement::class)
 
-// port-lint: source src/lib.rs
-
 package io.github.kotlinmania.maplit
 
 import io.github.kotlinmania.btree.BTreeMap
 import io.github.kotlinmania.btree.BTreeSet
-
-/**
- * Helpers for container literals with specific type.
- *
- * ```
- * import io.github.kotlinmania.maplit.hashmap
- *
- * val map = hashmap(
- *     "a" to 1,
- *     "b" to 2,
- * )
- * ```
- *
- * The **maplit** crate uses the `=>` separator between key and value in its
- * Rust macro syntax. The Kotlin port spells the same shape with the standard
- * library [Pair] (the `to` infix operator), so each entry is `key to value`.
- *
- * Generic container helpers already exist in Kotlin's standard library, so
- * those are not re-exported here.
- */
-
-/**
- * Create a [HashMap] from a list of key-value pairs.
- *
- * ## Example
- *
- * ```
- * import io.github.kotlinmania.maplit.hashmap
- *
- * val map = hashmap(
- *     "a" to 1,
- *     "b" to 2,
- * )
- * check(map["a"] == 1)
- * check(map["b"] == 2)
- * check(map["c"] == null)
- * ```
- */
-@kotlin.native.HiddenFromObjC
-fun <K, V> hashmap(vararg entries: Pair<K, V>): HashMap<K, V> {
-    val map = HashMap<K, V>()
-    for ((key, value) in entries) {
-        map[key] = value
-    }
-    return map
-}
-
-/**
- * Create a [HashSet] from a list of elements.
- *
- * ## Example
- *
- * ```
- * import io.github.kotlinmania.maplit.hashset
- *
- * val set = hashset("a", "b")
- * check("a" in set)
- * check("b" in set)
- * check("c" !in set)
- * ```
- */
-@kotlin.native.HiddenFromObjC
-fun <T> hashset(vararg elements: T): HashSet<T> {
-    val set = HashSet<T>()
-    for (element in elements) {
-        set.add(element)
-    }
-    return set
-}
-
-/**
- * Create a [BTreeMap] from a list of key-value pairs.
- *
- * ## Example
- *
- * ```
- * import io.github.kotlinmania.maplit.btreemap
- *
- * val map = btreemap(
- *     "a" to 1,
- *     "b" to 2,
- * )
- * check(map["a"] == 1)
- * check(map["b"] == 2)
- * check(map["c"] == null)
- * ```
- */
-@kotlin.native.HiddenFromObjC
-fun <K, V> btreemap(vararg entries: Pair<K, V>): BTreeMap<K, V> {
-    val map = BTreeMap<K, V>()
-    for ((key, value) in entries) {
-        map[key] = value
-    }
-    return map
-}
-
-/**
- * Create a [BTreeSet] from a list of elements.
- *
- * ## Example
- *
- * ```
- * import io.github.kotlinmania.maplit.btreeset
- *
- * val set = btreeset("a", "b")
- * check("a" in set)
- * check("b" in set)
- * check("c" !in set)
- * ```
- */
-@kotlin.native.HiddenFromObjC
-fun <T> btreeset(vararg elements: T): BTreeSet<T> {
-    val set = BTreeSet<T>()
-    for (element in elements) {
-        set.add(element)
-    }
-    return set
-}
 
 /**
  * Identity function. Used as the fallback for conversion.
@@ -172,9 +52,9 @@ fun <T> id(t: T): T = t
  * val mapTyped: HashMap<String, Int> = map2
  *
  * // c. Conversion-aware helpers work with all the maplit container types.
- * // For example, converting strings to byte arrays in a BTreeSet.
- * val set: io.github.kotlinmania.btree.BTreeSet<ByteArray> = convertArgsBtreeset(
- *     keys = { s: String -> s.encodeToByteArray() },
+ * // For example, converting strings to uppercase in a BTreeSet.
+ * val set: io.github.kotlinmania.btree.BTreeSet<String> = convertArgsBtreeset(
+ *     keys = { s: String -> s.uppercase() },
  *     "a", "b", "c", "d", "a", "e", "f",
  * )
  * check(set.size == 6)
