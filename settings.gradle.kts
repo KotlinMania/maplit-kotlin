@@ -16,7 +16,3 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "maplit-kotlin"
-
-if (file("../btree-kotlin").exists()) {
-    includeBuild("../btree-kotlin")
-}
